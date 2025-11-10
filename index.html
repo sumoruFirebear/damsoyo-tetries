@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>담소요 테트리스</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="start-screen" class="screen active">
+  <h1>담소요 테트리스</h1>
+  <button id="start-game-btn">게임 시작하기</button>
+</div>
+
+<div id="user-screen" class="screen">
+  <div id="user-list-box">
+    <h2>유저 선택</h2>
+    <p>플레이할 유저를 선택하세요.</p>
+    <div id="user-list">
+    </div>
+    <button id="show-new-user-form-btn">새 유저 등록하기</button>
+  </div>
+
+  <div id="user-creation-box" style="display: none;"> <h2>새 유저 등록</h2>
+    <input type="text" id="user-id-input" placeholder="아이디를 입력하세요">
+
+    <input type="password" id="user-password-input" placeholder="비밀번호 (4자리 이상)">
+    <input type="password" id="user-password-confirm" placeholder="비밀번호 확인">
+
+    <p style="margin-bottom: 5px; margin-top: 15px;">프로필 아바타 선택</p>
+    <div id="avatar-select-grid">
+      <button class="avatar-option">😊</button>
+      <button class="avatar-option">😎</button>
+      <button class="avatar-option">🚀</button>
+      <button class="avatar-option">🤖</button>
+      <button class="avatar-option">🦊</button>
+      <button class="avatar-option">🧩</button>
+    </div>
+
+    <select id="age-range-select">
+      <option value="easy">나이: 7세 미만 (쉬움)</option>
+      <option value="medium" selected>나이: 8-13세 (보통)</option>
+      <option value="hard">나이: 14세 이상 (어려움)</option>
+    </select>
+    <button id="user-confirm-btn">이 유저로 생성 및 시작</button>
+    <button id="back-to-user-list-btn" class="secondary">뒤로가기</button>
+  </div>
+</div>
+
+<div id="stage-select-screen" class="screen">
+  <h2>스테이지 선택</h2>
+  <p>환영합니다, <strong id="current-user-display"></strong>님!</p>
+  <p>오늘 남은 도전 횟수: <strong id="attempts-display">10</strong>회</p>
+  <div id="stage-list">
+  </div>
+  <button id="change-user-btn">유저 변경</button>
+</div>
+
+<div id="game-screen" class="screen">
+  <div id="game-container">
+    <canvas id="tetris-board"></canvas>
+    <div id="game-info">
+      <h3>Stage <span id="current-stage-num">1</span></h3>
+      <p>목표: <strong id="stage-goal"></strong></p>
+      <p>점수: <strong id="score">0</strong></p>
+
+      <h4>다음 블록</h4>
+      <canvas id="next-block"></canvas>
+
+      <p>남은 횟수: <strong id="attempts-left-game">10</strong></p>
+      <button id="back-to-stages-btn">포기 (스테이지 선택)</button>
+    </div>
+  </div>
+
+  <div class="touch-controls">
+    <button id="btn-left">◀</button>
+    <button id="btn-rotate">↺</button>
+    <button id="btn-right">▶</button>
+    <button id="btn-down">▼</button>
+    <button id="btn-hard-drop">Drop</button>
+  </div>
+</div>
+
+<div id="modal-overlay" style="display: none;">
+  <div id="password-login-modal" class="modal">
+    <h2 id="password-modal-title">로그인</h2>
+    <div id="password-modal-avatar" style="font-size: 3rem; margin: 10px;"></div>
+    <p>비밀번호를 입력하세요.</p>
+    <input type="password" id="password-modal-input" placeholder="비밀번호">
+    <p id="password-modal-error" style="color: red; display: none;"></p>
+    <button id="password-modal-login-btn">로그인</button>
+    <button id="password-modal-delete-btn" class="secondary" style="background-color: #ff3b30;">유저 삭제</button>
+    <button class="modal-close-btn" style="margin-top: 10px;">취소</button>
+  </div>
+
+  <div id="stage-clear-modal" class="modal">
+    <h2>스테이지 클리어!</h2>
+    <p>축하합니다! 점수: <span id="final-score">0</span></p>
+    <button id="next-stage-btn">다음 스테이지</button>
+    <button class="modal-close-btn">스테이지 선택</button>
+  </div>
+  <div id="game-over-modal" class="modal">
+    <h2>도전 실패</h2>
+    <p>아쉽지만 이번 도전에 실패했습니다.</p>
+    <button class="modal-close-btn">스테이지 선택</button>
+  </div>
+  <div id="no-attempts-modal" class="modal">
+    <h2>시도 횟수 고갈</h2>
+    <p>오늘의 도전 횟수 10번을 모두 사용했습니다.</p>
+    <p>내일 다시 도전해주세요!</p>
+    <button class="modal-close-btn">확인</button>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
