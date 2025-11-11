@@ -344,3 +344,29 @@ canvas {
     margin: 20px auto; /* 위아래 여백 20px, 좌우 자동 (가운데 정렬) */
     display: block;
 }
+
+/* style.css 파일 맨 끝에 추가 */
+
+/* 암컷 장수풍뎅이 이동 효과 */
+#moving-dog {
+    position: fixed; /* 화면에 고정 */
+    bottom: 10px;    /* 하단에서 10px 위 */
+    left: -100px;    /* 화면 밖에서 시작 (- 이미지 너비만큼) */
+    width: 100px;     /* 이미지 크기 조절 (필요에 따라 조절) */
+    height: auto;
+    z-index: 999;    /* 다른 요소 위로 */
+
+    /* 애니메이션 적용 */
+    animation: moveDog 15s ease-in-out infinite;
+    /* 15초 동안 선형으로, 무한 반복, 끝에서 끝으로 왕복 */
+}
+
+/* 장수풍뎅이 이동 애니메이션 키프레임 */
+@keyframes moveDog {
+    0% {
+        transform: translateX(0); /* 시작점 (left: -100px 기준) */
+    }
+    100% {
+        transform: translateX(calc(100vw + 100px)); /* 화면 끝까지 이동 (화면 너비 + 시작 offset) */
+    }
+}
