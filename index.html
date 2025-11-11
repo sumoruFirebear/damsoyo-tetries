@@ -12,7 +12,8 @@
 <body>
 
 <div id="start-screen" class="screen active">
-  <h1>담소요 테트리스</h1>
+  <h1>🦈🧸🐕 담소요 테트리스 🐸</h1>
+  <img id="main-image" src="" alt="테트리스 메인 이미지">
   <button id="start-game-btn">게임 시작하기</button>
 </div>
 
@@ -51,13 +52,32 @@
   </div>
 </div>
 
+<div id="mode-select-screen" class="screen">
+  <h2>모드 선택</h2>
+  <p>환영합니다, <strong id="current-user-display-mode"></strong>님!</p>
+  <div id="mode-select-box">
+    <button id="start-stage-mode-btn" class="mode-select-btn">
+      <h3>🧩 스테이지 모드</h3>
+      <p>정해진 퍼즐을 클리어하세요!</p>
+      <p>남은 횟수: <strong id="stage-attempts-display">10</strong>회</p>
+    </button>
+    <button id="start-normal-mode-btn" class="mode-select-btn">
+      <h3>🏆 일반 모드</h3>
+      <p>게임 오버까지 최고 점수에 도전하세요!</p>
+      <p>남은 횟수: <strong id="normal-attempts-display">5</strong>회</p>
+      <p>최고 점수: <strong id="normal-highscore-display">0</strong>점</p>
+    </button>
+  </div>
+  <button id="change-user-btn-mode" class="secondary">유저 변경</button>
+</div>
+
 <div id="stage-select-screen" class="screen">
   <h2>스테이지 선택</h2>
   <p>환영합니다, <strong id="current-user-display"></strong>님!</p>
   <p>오늘 남은 도전 횟수: <strong id="attempts-display">10</strong>회</p>
   <div id="stage-list">
   </div>
-  <button id="change-user-btn">유저 변경</button>
+  <button id="back-to-mode-btn" class="secondary">모드 선택으로</button>
 </div>
 
 <div id="game-screen" class="screen">
@@ -71,8 +91,8 @@
       <h4>다음 블록</h4>
       <canvas id="next-block"></canvas>
 
-      <p>남은 횟수: <strong id="attempts-left-game">10</strong></p>
-      <button id="back-to-stages-btn">포기 (스테이지 선택)</button>
+      <p>남은 횟수: <strong id="attempts-left-game">?</strong>회</p>
+      <button id="give-up-btn">포기 (모드 선택)</button>
     </div>
   </div>
 
@@ -110,12 +130,21 @@
   </div>
   <div id="no-attempts-modal" class="modal">
     <h2>시도 횟수 고갈</h2>
-    <p>오늘의 도전 횟수 10번을 모두 사용했습니다.</p>
+    <p id="no-attempts-message">오늘의 도전 횟수를 모두 사용했습니다.</p>
     <p>내일 다시 도전해주세요!</p>
     <button class="modal-close-btn">확인</button>
   </div>
+  <div id="normal-game-over-modal" class="modal">
+    <h2>게임 오버!</h2>
+    <p id="new-high-score-message" style="display:none; color: var(--color-primary); font-weight: 700;">
+      🎉 최고기록 갱신!
+    </p>
+    <p>최종 점수: <strong id="normal-final-score">0</strong>점</p>
+    <p>내 최고 점수: <strong id="normal-high-score">0</strong>점</p>
+    <button class="modal-close-btn">모드 선택</button>
+  </div>
 </div>
-
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

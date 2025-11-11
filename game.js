@@ -54,11 +54,14 @@ window.addEventListener('DOMContentLoaded', () => {
     let currentStage = null; // 현재 플레이 중인 스테이지 데이터
     let selectedAvatar = null; // [신설] 유저 생성 시 선택한 아바타
     let selectedUserForLogin = null; // [신설] 로그인 시도 중인 유저 ID
+    let currentMode = null;
+    let isGameOver = false; // [신설] 게임 오버 상태 플래그
 
     // DOM 요소 캐시
     const screens = {
         start: document.getElementById('start-screen'),
         user: document.getElementById('user-screen'),
+        modeSelect: document.getElementById('mode-select-screen'), // [신설]
         stageSelect: document.getElementById('stage-select-screen'),
         game: document.getElementById('game-screen')
     };
@@ -67,7 +70,8 @@ window.addEventListener('DOMContentLoaded', () => {
         stageClear: document.getElementById('stage-clear-modal'),
         gameOver: document.getElementById('game-over-modal'),
         noAttempts: document.getElementById('no-attempts-modal'),
-        passwordLogin: document.getElementById('password-login-modal') // [신설]
+        passwordLogin: document.getElementById('password-login-modal'),
+        normalGameOver: document.getElementById('normal-game-over-modal') // [신설]
     };
 
     // [신설] 스테이지 번호를 기반으로 스테이지 데이터를 동적으로 생성합니다.
@@ -254,7 +258,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // 3. 스테이지 선택 화면으로 이동
         // (이 함수가 내부적으로 getUserData()를 호출하여 날짜/횟수 갱신)
-        renderStageSelectScreen();
+        renderModeSelectScreen();
     }
 
     /**
@@ -309,6 +313,67 @@ window.addEventListener('DOMContentLoaded', () => {
         return hashHex;
     }
 
+
+    /**
+     * [신설] 화면에 축하 폭죽을 터뜨립니다.
+     */
+    function triggerFireworks() {
+        // confetti 라이브러리가 로드되었는지 확인
+        if (typeof confetti !== 'function') {
+            return;
+        }
+
+        // 왼쪽/오른쪽에서 쏘아 올리는 효과
+        const duration = 2 * 1000; // 2초간 지속
+        const end = Date.now() + duration;
+
+        (function frame() {
+            // 양쪽에서 쏘기
+            confetti({
+                particleCount: 2,
+                angle: 60,
+                spread: 55,
+                origin: { x: 0, y: 0.7 } // 왼쪽
+            });
+            confetti({
+                particleCount: 2,
+                angle: 120,
+                spread: 55,
+                origin: { x: 1, y: 0.7 } // 오른쪽
+            });
+
+            // 2초 뒤에 멈춤
+            if (Date.now() < end) {
+                requestAnimationFrame(frame);
+            }
+        }());
+    }
+
+    /**
+     * [신설] 시작 화면의 메인 이미지를 랜덤으로 설정합니다.
+     */
+    function setRandomMainImage() {
+        // [0:5] -> 0, 1, 2, 3, 4, 5 (총 6개)
+        const randomIndex = Math.floor(Math.random() * 5);
+
+        // 중요: 이미지 확장자를 .png로 가정합니다.
+        // 만약 .jpg, .gif 등 다른 형식이면 이 부분을 수정하세요!
+        const imageExtension = '.jpg';
+        const imagePath = `image/IMG_MAIN_${randomIndex}${imageExtension}`;
+
+        const imgEl = document.getElementById('main-image');
+        if (imgEl) {
+            imgEl.src = imagePath;
+
+            // (선택 사항) 만약 이미지를 불러오지 못할 경우 대체 텍스트가 보이도록
+            imgEl.onerror = () => {
+                imgEl.alt = '이미지를 불러올 수 없습니다. image/ 폴더를 확인하세요.';
+            };
+        } else {
+            console.error('시작 화면의 main-image 요소를 찾을 수 없습니다.');
+        }
+    }
+
     // --- 4. 데이터 관리 (localStorage) ---
 
     /** localStorage에서 전체 게임 데이터를 불러옵니다. */
@@ -326,27 +391,43 @@ window.addEventListener('DOMContentLoaded', () => {
      * 현재 유저의 데이터를 가져오거나 초기화합니다.
      * 일일 시도 횟수를 체크하고, 날짜가 다르면 리셋합니다.
      */
+    /**
+     * 현재 유저의 데이터를 가져오거나 초기화합니다.
+     * (수정: 시도 횟수 분리 및 최고 점수 필드 추가)
+     */
     function getUserData() {
         const userId = currentPlayer.id;
+        const today = getTodayDate();
+
         if (!gameData[userId]) {
             // 새 유저 데이터 생성
-            // (경고: 이 로직은 handleUserLogin에서 이미 처리되므로,
-            //        currentPlayer에 passwordHash, profilePic이 없다면 비정상)
-            console.warn(`getUserData: ${userId} 데이터가 없습니다. 새로 생성합니다.`);
             gameData[userId] = {
                 difficulty: currentPlayer.difficulty,
-                profilePic: '❔', // 기본값
-                passwordHash: '', // 기본값 (로그인 불가)
-                lastPlayed: getTodayDate(),
-                attempts: 10,
+                profilePic: currentPlayer.profilePic || '❔',
+                passwordHash: currentPlayer.passwordHash || '',
+                lastPlayed: today,
+                stageAttempts: 10,  // [수정]
+                normalAttempts: 5,  // [신설]
+                normalHighScore: 0, // [신설]
                 stages: {}
             };
         } else {
+            // --- [신설] 기존 유저 데이터 구조 마이그레이션 ---
+            // (기존 'attempts'를 'stageAttempts'로 옮기고 새 필드 추가)
+            if (typeof gameData[userId].stageAttempts === 'undefined') {
+                console.warn(`유저 [${userId}] 데이터 마이그레이션 중...`);
+                gameData[userId].stageAttempts = gameData[userId].attempts || 10;
+                gameData[userId].normalAttempts = 5;
+                gameData[userId].normalHighScore = 0;
+                delete gameData[userId].attempts; // 오래된 키 삭제
+            }
+            // --- 마이그레이션 끝 ---
+
             // 날짜 확인하여 시도 횟수 리셋
-            const today = getTodayDate();
             if (gameData[userId].lastPlayed !== today) {
                 gameData[userId].lastPlayed = today;
-                gameData[userId].attempts = 10;
+                gameData[userId].stageAttempts = 10;
+                gameData[userId].normalAttempts = 5;
             }
         }
         saveGameData();
@@ -357,6 +438,8 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- 5. 게임 흐름 관리 (화면 전환) ---
 
     function init() {
+        setRandomMainImage();
+
         // 1. 첫 화면 버튼
         document.getElementById('start-game-btn').addEventListener('click', () => {
             showScreen('user');
@@ -403,25 +486,46 @@ window.addEventListener('DOMContentLoaded', () => {
             handleDeleteUser();
         });
 
-        // 3. 스테이지 선택 화면 버튼
-        document.getElementById('change-user-btn').addEventListener('click', () => {
+        // 3. [신설] 모드 선택 화면 버튼
+        document.getElementById('change-user-btn-mode').addEventListener('click', (e) => {
+            e.preventDefault();
             localStorage.removeItem(LS_USER_KEY); // 현재 유저 정보 삭제
             currentPlayer = null;
             showScreen('user');
             renderUserListScreen();
         });
 
-        // 4. 게임 화면 버튼
-        document.getElementById('back-to-stages-btn').addEventListener('click', () => {
-            stopGameLoop();
-            renderStageSelectScreen(); // 스테이지 선택 화면으로 돌아가기
+        document.getElementById('start-stage-mode-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            // 스테이지 선택 화면으로 이동
+            renderStageSelectScreen();
         });
 
-        // 5. 모달 닫기 버튼
+        document.getElementById('start-normal-mode-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            // 일반 모드 즉시 시작
+            handleNormalStart();
+        });
+
+        // 4. [신설] 스테이지 선택 화면 -> 뒤로가기 버튼
+        document.getElementById('back-to-mode-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            renderModeSelectScreen();
+        });
+
+
+        // 5. 게임 화면 버튼 (ID 변경됨)
+        document.getElementById('give-up-btn').addEventListener('click', () => {
+            stopGameLoop();
+            renderModeSelectScreen(); // [수정] 모드 선택 화면으로 돌아가기
+        });
+
+        // 6. 모달 닫기 버튼
         document.querySelectorAll('.modal-close-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
                 hideModals();
-                renderStageSelectScreen(); // 스테이지 선택 화면으로
+                renderModeSelectScreen(); // [수정] 스테이지 선택 -> 모드 선택으로
             });
         });
 
@@ -496,9 +600,11 @@ window.addEventListener('DOMContentLoaded', () => {
         gameData[userId] = {
             difficulty: difficulty,
             profilePic: selectedAvatar,
-            passwordHash: passwordHash, // 해시된 비밀번호 저장
+            passwordHash: passwordHash,
             lastPlayed: getTodayDate(),
-            attempts: 10,
+            stageAttempts: 10,  // [수정]
+            normalAttempts: 5,  // [신설]
+            normalHighScore: 0, // [신설]
             stages: {}
         };
         saveGameData();
@@ -520,7 +626,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const userData = getUserData(); // 시도 횟수 리셋/확인
 
         document.getElementById('current-user-display').textContent = currentPlayer.id;
-        document.getElementById('attempts-display').textContent = userData.attempts;
+        document.getElementById('attempts-display').textContent = userData.stageAttempts;
 
         const stageList = document.getElementById('stage-list');
         stageList.innerHTML = ''; // 목록 비우기
@@ -568,10 +674,14 @@ window.addEventListener('DOMContentLoaded', () => {
 
     /** 4. (스테이지 선택) 게임 시작 처리 */
     function handleStageStart(stageId) {
-        const userData = getUserData();
+        currentMode = 'stage';
+        isGameOver = false; // [추가]
 
+        const userData = getUserData();
         // 1. 시도 횟수 확인
-        if (userData.attempts <= 0) {
+        if (userData.stageAttempts <= 0) { // [수정] stageAttempts
+            document.getElementById('no-attempts-message').textContent =
+                '오늘의 스테이지 모드 도전 횟수를 모두 사용했습니다.';
             showModal('noAttempts');
             return;
         }
@@ -617,6 +727,7 @@ window.addEventListener('DOMContentLoaded', () => {
     /** 5. (게임 종료) 스테이지 클리어 처리 */
     function handleStageClear() {
         stopGameLoop();
+        triggerFireworks(); // [신설] 축하 폭죽!
 
         // 데이터 저장
         const userData = getUserData();
@@ -628,11 +739,43 @@ window.addEventListener('DOMContentLoaded', () => {
         showModal('stageClear');
     }
 
-    /** 6. (게임 종료) 시도 실패(게임 오버) 처리 */
+    /** 6. (게임 종료) 시도 실패(게임 오버) 처리 (모드 분기 추가) */
     function handleGameOver() {
+        // [수정] A. 중복 호출 방지
+        if (isGameOver) return;
+
+        // [수정] B. 플래그 설정
+        isGameOver = true;
+
         stopGameLoop();
-        showModal('gameOver');
-        // 시도 횟수는 이미 handleStageStart에서 차감했음
+
+        if (currentMode === 'stage') {
+            // 스테이지 모드 실패
+            showModal('gameOver');
+        } else {
+            // 일반 모드 게임 오버
+            const userData = getUserData();
+            let newHighScore = false;
+
+            if (score > userData.normalHighScore) {
+                userData.normalHighScore = score;
+                newHighScore = true;
+                saveGameData();
+            }
+
+            // 모달 내용 업데이트
+            document.getElementById('normal-final-score').textContent = score;
+            document.getElementById('normal-high-score').textContent = userData.normalHighScore;
+
+            if (newHighScore) {
+                document.getElementById('new-high-score-message').style.display = 'block';
+                triggerFireworks(); // [신설] 축하 폭죽!
+            } else {
+                document.getElementById('new-high-score-message').style.display = 'none';
+            }
+
+            showModal('normalGameOver');
+        }
     }
 
 
@@ -665,12 +808,21 @@ window.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    /** 게임 화면 UI (점수, 목표 등)를 업데이트합니다. */
+    /** 게임 화면 UI (점수, 목표 등)를 업데이트합니다. (모드 분기 추가) */
     function updateGameUI() {
-        document.getElementById('current-stage-num').textContent = currentStage.id.replace('stage', '');
-        document.getElementById('stage-goal').textContent = `${currentStage.goal.count}줄 제거`;
+        const userData = gameData[currentPlayer.id];
+
+        if (currentMode === 'stage') {
+            document.getElementById('current-stage-num').textContent = currentStage.id.replace('stage', '');
+            document.getElementById('stage-goal').textContent = `${currentStage.goal.count}줄 제거`;
+            document.getElementById('attempts-left-game').textContent = userData.stageAttempts;
+        } else { // 'normal' 모드
+            document.getElementById('current-stage-num').textContent = '일반';
+            document.getElementById('stage-goal').textContent = `최고: ${userData.normalHighScore}`;
+            document.getElementById('attempts-left-game').textContent = userData.normalAttempts;
+        }
+
         document.getElementById('score').textContent = score;
-        document.getElementById('attempts-left-game').textContent = gameData[currentPlayer.id].attempts;
         drawNextPiece();
     }
 
@@ -700,7 +852,10 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         drawGame(); // 매 프레임마다 게임 화면 그리기
-        gameLoopId = requestAnimationFrame(gameLoop);
+        // [수정] 게임 오버 상태가 아닐 때만 다음 루프를 예약
+        if (!isGameOver) {
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
     }
 
     /** (컨트롤) 블록을 아래로 한 칸 내립니다. */
@@ -815,8 +970,8 @@ window.addEventListener('DOMContentLoaded', () => {
         // 줄 제거 확인
         const stageWasCleared = clearLines(); // [수정] 반환 값 받기
 
-        // [추가] 스테이지가 클리어 되었다면, 새 블록 생성을 막고 즉시 종료
-        if (stageWasCleared) {
+        // [수정] 스테이지가 클리어 되었다면 (스테이지 모드일 때만), 새 블록 생성을 막고 즉시 종료
+        if (currentMode === 'stage' && stageWasCleared) {
             return;
         }
 
@@ -849,8 +1004,8 @@ window.addEventListener('DOMContentLoaded', () => {
             let lineScore = [0, 100, 300, 500, 800];
             score += lineScore[linesRemoved] || lineScore[4]; // 4줄 이상은 800점
 
-            // 스테이지 클리어 확인
-            if (linesClearedThisStage >= currentStage.goal.count) {
+            // 스테이지 클리어 확인 (스테이지 모드일 때만)
+            if (currentMode === 'stage' && linesClearedThisStage >= currentStage.goal.count) {
                 handleStageClear();
                 return true;
             }
@@ -973,4 +1128,62 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // --- 게임 시작 ---
     init();
+
+    // [신설] 모드 선택 화면 렌더링
+    function renderModeSelectScreen() {
+        showScreen('modeSelect');
+        const userData = getUserData(); // 데이터 로드 및 횟수 갱신
+
+        // UI 업데이트
+        document.getElementById('current-user-display-mode').textContent = currentPlayer.id;
+        document.getElementById('stage-attempts-display').textContent = userData.stageAttempts;
+        document.getElementById('normal-attempts-display').textContent = userData.normalAttempts;
+        document.getElementById('normal-highscore-display').textContent = userData.normalHighScore;
+    }
+
+    // [신설] 일반 모드 게임 시작 처리
+    function handleNormalStart() {
+        currentMode = 'normal'; // 모드 설정
+        isGameOver = false; // [추가]
+        const userData = getUserData();
+
+        // 1. 시도 횟수 확인
+        if (userData.normalAttempts <= 0) {
+            document.getElementById('no-attempts-message').textContent =
+                '오늘의 일반 모드 도전 횟수를 모두 사용했습니다.';
+            showModal('noAttempts');
+            return;
+        }
+
+        // 2. 시도 횟수 차감
+        userData.normalAttempts--;
+        saveGameData();
+
+        // 3. 게임 초기화
+        score = 0;
+
+        // 4. 난이도(속도) 설정
+        switch (currentPlayer.difficulty) {
+            case 'easy': dropInterval = 1000; break;
+            case 'medium': dropInterval = 700; break;
+            case 'hard': dropInterval = 400; break;
+        }
+
+        // 5. 빈 보드 설정
+        board = createEmptyBoard();
+
+        // 6. UI를 위한 가짜 스테이지 객체
+        currentStage = { id: 'Normal', goal: { type: 'endless' } };
+
+        // 7. 첫 블록 생성
+        nextPiece = getRandomPiece();
+        spawnNewPiece();
+
+        // 8. UI 업데이트 및 게임 화면 표시
+        updateGameUI();
+        showScreen('game');
+
+        // 9. 게임 루프 시작
+        startGameLoop();
+    }
 });
