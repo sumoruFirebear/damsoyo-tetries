@@ -672,14 +672,13 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /** 4. (스테이지 선택) 게임 시작 처리 */
     function handleStageStart(stageId) {
         currentMode = 'stage';
-        isGameOver = false; // [추가]
-
+        isGameOver = false;
         const userData = getUserData();
+
         // 1. 시도 횟수 확인
-        if (userData.stageAttempts <= 0) { // [수정] stageAttempts
+        if (userData.stageAttempts <= 0) {
             document.getElementById('no-attempts-message').textContent =
                 '오늘의 스테이지 모드 도전 횟수를 모두 사용했습니다.';
             showModal('noAttempts');
@@ -687,14 +686,17 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         // 2. 시도 횟수 차감
-        userData.attempts--;
+        userData.stageAttempts--;
+
+        // [★ 해결] 변경된 횟수를 즉시 저장합니다.
         saveGameData();
 
         // 3. 게임 초기화
         const stageNumber = parseInt(stageId.replace('stage', ''), 10);
         currentStage = generateStageData(stageNumber);
+
         score = 0;
-        linesClearedThisStage = 0;
+        linesClearedThisStage = 0; // 스테이지 모드용 변수 초기화
 
         // 4. 난이도(속도) 설정
         switch (currentPlayer.difficulty) {
@@ -712,7 +714,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         // 6. 첫 블록 생성
-        // (스테이지 데이터에 블록 순서가 있다면 따르고, 아니면 랜덤)
         nextPiece = getRandomPiece();
         spawnNewPiece();
 
@@ -731,6 +732,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // 데이터 저장
         const userData = getUserData();
+
         userData.stages[currentStage.id] = { cleared: true, score: score };
         saveGameData();
 
@@ -808,20 +810,26 @@ window.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    /** 게임 화면 UI (점수, 목표 등)를 업데이트합니다. (모드 분기 추가) */
+    /** 게임 화면 UI (점수, 목표 등)를 업데이트합니다. */
     function updateGameUI() {
+        // [중요] gameData에서 현재 유저의 최신 정보를 가져옵니다.
         const userData = gameData[currentPlayer.id];
 
         if (currentMode === 'stage') {
+            // [수정] 'stage' 모드일 때
             document.getElementById('current-stage-num').textContent = currentStage.id.replace('stage', '');
             document.getElementById('stage-goal').textContent = `${currentStage.goal.count}줄 제거`;
+            // [수정] 'stageAttempts'를 표시
             document.getElementById('attempts-left-game').textContent = userData.stageAttempts;
-        } else { // 'normal' 모드
+
+        } else { // 'normal' 모드일 때
             document.getElementById('current-stage-num').textContent = '일반';
             document.getElementById('stage-goal').textContent = `최고: ${userData.normalHighScore}`;
+            // [수정] 'normalAttempts'를 표시
             document.getElementById('attempts-left-game').textContent = userData.normalAttempts;
         }
 
+        // 공통 UI
         document.getElementById('score').textContent = score;
         drawNextPiece();
     }
