@@ -287,9 +287,20 @@ window.addEventListener('DOMContentLoaded', () => {
         modals.overlay.style.display = 'none';
     }
 
-    /** 오늘 날짜를 'YYYY-MM-DD' 형식으로 반환합니다. */
+    /** 오늘 날짜를 'YYYY-MM-DD' 형식(현지 시간 기준)으로 반환합니다. */
     function getTodayDate() {
-        return new Date().toISOString().split('T')[0];
+        const now = new Date(); // 사용자의 현지 시간을 가져옵니다.
+
+        const year = now.getFullYear();
+
+        // getMonth()는 0~11을 반환하므로 +1 해줍니다.
+        // padStart(2, '0')는 '5'를 '05'로, '12'는 '12'로 만들어줍니다.
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+
+        // getDate()는 날짜(1~31)를 반환합니다.
+        const day = String(now.getDate()).padStart(2, '0');
+
+        return `${year}-${month}-${day}`;
     }
 
     /** 빈 게임 보드(2D 배열)를 생성합니다. */
