@@ -505,6 +505,13 @@ window.addEventListener('DOMContentLoaded', () => {
             handleDeleteUser();
         });
 
+        // [신설] 비밀번호 로그인 모달 - '취소' 버튼
+        document.getElementById('password-modal-cancel-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            hideModals(); // 1. 모달 닫기
+            renderUserListScreen(); // 2. 유저 선택 화면으로 이동
+        });
+
         // 3. [신설] 모드 선택 화면 버튼
         document.getElementById('change-user-btn-mode').addEventListener('click', (e) => {
             e.preventDefault();
