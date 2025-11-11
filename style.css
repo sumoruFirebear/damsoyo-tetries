@@ -176,6 +176,7 @@ canvas {
     margin: 5px;
     border-radius: 50%;
     line-height: 1;
+    touch-action: manipulation;
 }
 
 /* ... (기존 버튼 스타일은 그대로 둡니다) ... */
