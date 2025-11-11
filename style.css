@@ -164,8 +164,8 @@ canvas {
 
 /* 터치 컨트롤 (아이패드/모바일용) */
 .touch-controls {
-    /* ★ 수정: 기본적으로 '보이도록' 변경 */
-    display: block;
+    /* ★ 수정: 기본적으로 '숨김' (PC/데스크탑) */
+    display: none;
     margin-top: 20px;
 }
 .touch-controls button {
@@ -189,10 +189,10 @@ canvas {
     background-color: #8e44ad;
 }
 
-/* ★ 수정: '마우스'가 있는 PC(pointer: fine) 환경에서만 컨트롤 숨기기 */
-@media (pointer: fine) {
+/* ★ 수정: '터치 스크린'(pointer: coarse)이 감지될 때만 컨트롤 보이기 */
+@media (pointer: coarse) {
     .touch-controls {
-        display: none;
+        display: block;
     }
 }
 
