@@ -162,32 +162,37 @@ canvas {
     border-radius: 8px;
 }
 
-/* 터치 컨트롤 (아이패드용) */
+/* 터치 컨트롤 (아이패드/모바일용) */
 .touch-controls {
-    display: none;
+    /* ★ 수정: 기본적으로 '보이도록' 변경 */
+    display: block;
     margin-top: 20px;
 }
 .touch-controls button {
-    font-size: 1.8rem; /* 아이콘/글자 크기 증가 */
+    /* ... (기존 버튼 스타일은 그대로 둡니다) ... */
+    font-size: 1.8rem;
     width: 70px;
     height: 70px;
     margin: 5px;
-    border-radius: 50%; /* [변경] 버튼을 동그랗게! */
+    border-radius: 50%;
     line-height: 1;
 }
+
+/* ... (기존 버튼 스타일은 그대로 둡니다) ... */
 #btn-hard-drop {
     width: 100%;
     margin-top: 10px;
-    background-color: #9b59b6; /* 보라색 (Drop) */
-    border-radius: var(--radius-m); /* Drop은 네모 */
+    background-color: #9b59b6;
+    border-radius: var(--radius-m);
 }
 #btn-hard-drop:hover {
     background-color: #8e44ad;
 }
 
-@media (max-width: 768px) {
+/* ★ 수정: '마우스'가 있는 PC(pointer: fine) 환경에서만 컨트롤 숨기기 */
+@media (pointer: fine) {
     .touch-controls {
-        display: block;
+        display: none;
     }
 }
 
