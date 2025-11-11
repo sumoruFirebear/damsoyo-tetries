@@ -57,6 +57,10 @@ window.addEventListener('DOMContentLoaded', () => {
     let currentMode = null;
     let isGameOver = false; // [신설] 게임 오버 상태 플래그
 
+    // [신설] CSS 색상 변수를 저장할 JS 변수
+    let boardBgColor = '#2b2a4c'; // 'cute' 디자인의 기본값
+    let nextBgColor = '#39385b';
+
     // DOM 요소 캐시
     const screens = {
         start: document.getElementById('start-screen'),
@@ -450,6 +454,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function init() {
         setRandomMainImage();
+
+        // [신설] CSS로부터 계산된 스타일 값을 가져와 JS 변수에 저장
+        boardBgColor = window.getComputedStyle(document.body).getPropertyValue('--color-board-bg') || boardBgColor;
+        nextBgColor = window.getComputedStyle(document.body).getPropertyValue('--color-board-next') || nextBgColor;
 
         // 1. 첫 화면 버튼
         document.getElementById('start-game-btn').addEventListener('click', () => {
@@ -1035,18 +1043,40 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // --- 7. 그리기(Drawing) 함수 ---
 
-    /** 게임 보드와 현재 블록을 모두 그립니다. */
+    /** 게임 보드와 현재 블록을 모두 그립니다. (고스트 피스 추가) */
     function drawGame() {
-        // 1. 캔버스 초기화 (검은색)
-        boardCtx.fillStyle = '#000';
+        // 1. 캔버스 초기화
+        boardCtx.fillStyle = boardBgColor; // [수정] JS 변수 사용
         boardCtx.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
+
+        // [신설] 1.5. '쉬움' 난이도일 때 고스트 피스 그리기
+        if (currentPlayer && currentPlayer.difficulty === 'easy' && currentPiece) {
+
+            // 1. 고스트 피스 위치 계산
+            // 현재 조각을 복사하여 임시 'ghost' 조각 생성
+            const ghost = {
+                shape: currentPiece.shape,
+                x: currentPiece.x,
+                y: currentPiece.y
+            };
+
+            // 충돌할 때까지 아래로 내림
+            while (!checkCollision(ghost)) {
+                ghost.y++;
+            }
+            ghost.y--; // 충돌 직전 위치로 되돌림
+
+            // 2. 고스트 피스 그리기 (isGhost = true)
+            drawPiece(ghost, boardCtx, BLOCK_SIZE, 0, 0, true);
+        }
 
         // 2. 고정된 블록 그리기 (보드)
         drawBoard();
 
         // 3. 현재 움직이는 블록 그리기
         if (currentPiece) {
-            drawPiece(currentPiece, boardCtx, BLOCK_SIZE);
+            // [수정] isGhost = false 플래그 추가
+            drawPiece(currentPiece, boardCtx, BLOCK_SIZE, 0, 0, false);
         }
     }
 
@@ -1066,8 +1096,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     /** '다음 블록' 캔버스에 다음 블록을 그립니다. */
     function drawNextPiece() {
-        const size = BLOCK_SIZE - 5; // 약간 작은 크기
-        nextCtx.fillStyle = '#111'; // 배경
+        const size = BLOCK_SIZE - 5;
+        nextCtx.fillStyle = nextBgColor; // [수정] JS 변수 사용
         nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
 
         if (nextPiece) {
@@ -1079,7 +1109,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const offsetX = (nextCanvas.width - w) / 2;
             const offsetY = (nextCanvas.height - h) / 2;
 
-            drawPiece(nextPiece, nextCtx, size, offsetX, offsetY);
+            drawPiece(nextPiece, nextCtx, size, offsetX, offsetY, false);
         }
     }
 
@@ -1091,8 +1121,21 @@ window.addEventListener('DOMContentLoaded', () => {
      * @param {number} [offsetX=0] - 캔버스 내 X축 오프셋
      * @param {number} [offsetY=0] - 캔버스 내 Y축 오프셋
      */
-    function drawPiece(piece, ctx, blockSize, offsetX = 0, offsetY = 0) {
-        ctx.fillStyle = piece.color;
+    /**
+     * 특정 블록 조각을 지정된 캔버스 컨텍스트에 그립니다.
+     * (수정: isGhost 플래그 추가)
+     */
+    function drawPiece(piece, ctx, blockSize, offsetX = 0, offsetY = 0, isGhost = false) {
+
+        // [수정] 고스트 여부에 따라 스타일 설정
+        if (isGhost) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; // 반투명 흰색
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'; // 밝은 테두리
+        } else {
+            ctx.fillStyle = piece.color;
+            ctx.strokeStyle = '#000'; // 기존 검은색 테두리
+        }
+
         piece.shape.forEach((row, r) => {
             row.forEach((value, c) => {
                 if (value !== 0) {
@@ -1101,13 +1144,16 @@ window.addEventListener('DOMContentLoaded', () => {
 
                     // nextCtx에 그릴 땐 piece.x, piece.y가 아닌 오프셋만 사용
                     if (ctx === nextCtx) {
-                        ctx.fillRect(c * blockSize + offsetX, r * blockSize + offsetY, blockSize, blockSize);
+                        // [수정] 고스트가 아닌 일반 스타일 적용
+                        ctx.fillStyle = piece.color; // nextCtx는 항상 원본 색상
                         ctx.strokeStyle = '#000';
+
+                        ctx.fillRect(c * blockSize + offsetX, r * blockSize + offsetY, blockSize, blockSize);
                         ctx.strokeRect(c * blockSize + offsetX, r * blockSize + offsetY, blockSize, blockSize);
                     } else {
                         // boardCtx에 그릴 땐 piece.x, piece.y 사용
+                        // (위에서 설정한 fillStyle과 strokeStyle이 여기서 사용됨)
                         ctx.fillRect(x, y, blockSize, blockSize);
-                        ctx.strokeStyle = '#000';
                         ctx.strokeRect(x, y, blockSize, blockSize);
                     }
                 }
